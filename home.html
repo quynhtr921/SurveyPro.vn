@@ -1,0 +1,1805 @@
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import confetti from 'canvas-confetti';
+import {
+  Wallet,
+  ArrowDownToLine,
+  History,
+  ShieldCheck,
+  Award,
+  Sparkles,
+  CheckCircle2,
+  Coins,
+  ArrowRight,
+  RotateCcw,
+  Check,
+  Send,
+  PenTool,
+  HelpCircle,
+  Clock,
+  ExternalLink,
+  ChevronRight,
+  TrendingUp,
+  Building2,
+  CreditCard,
+  User,
+  Copy,
+  Info,
+  X,
+  Loader2,
+  Lock,
+  ShoppingBag,
+  Utensils,
+  Smartphone,
+  Plane,
+  Car,
+  HeartPulse,
+  Film,
+  GraduationCap,
+  Briefcase,
+  Home,
+  Coffee,
+  Shirt,
+  Gamepad2,
+  BookOpen,
+  Music,
+  Tv,
+  Gift,
+  Zap,
+  Globe,
+  Sun,
+  Truck,
+  DollarSign,
+  Headphones,
+  Laptop,
+  Camera,
+  Layers
+} from 'lucide-react';
+
+/* =========================================================================
+   1. TYPES & INTERFACES
+   ========================================================================= */
+
+export type QuestionType = 'multiple_choice' | 'text';
+
+export interface QuestionOption {
+  id: string;
+  text: string;
+}
+
+export interface Question {
+  id: number;
+  text: string;
+  type?: QuestionType;
+  placeholder?: string;
+  suggestions?: string[];
+  noReward?: boolean;
+  options?: QuestionOption[];
+}
+
+export interface Survey {
+  id: number;
+  title: string;
+  category: string;
+  iconName: string;
+  questions: Question[];
+}
+
+export interface CompletedSurveyRecord {
+  surveyId: number;
+  completedAt: string;
+  totalEarned: number;
+}
+
+export interface BankInfo {
+  id: string;
+  name: string;
+  shortName: string;
+  logo: string;
+  code: string;
+}
+
+export interface WithdrawalTransaction {
+  id: string;
+  amount: number;
+  bankName: string;
+  accountNumber: string;
+  accountHolder: string;
+  timestamp: string;
+  status: 'processing' | 'success' | 'failed';
+  transactionRef: string;
+}
+
+/* =========================================================================
+   2. DATA: BANKS & 30 SURVEYS
+   ========================================================================= */
+
+export const POPULAR_BANKS: BankInfo[] = [
+  { id: 'vcb', name: 'Ngân hàng TMCP Ngoại Thương Việt Nam', shortName: 'Vietcombank', code: 'VCB', logo: '🟢' },
+  { id: 'tcb', name: 'Ngân hàng TMCP Kỹ Thương Việt Nam', shortName: 'Techcombank', code: 'TCB', logo: '🔴' },
+  { id: 'mbb', name: 'Ngân hàng TMCP Quân Đội', shortName: 'MB Bank', code: 'MBB', logo: '🔵' },
+  { id: 'bidv', name: 'Ngân hàng TMCP Đầu tư và Phát triển VN', shortName: 'BIDV', code: 'BIDV', logo: '🔷' },
+  { id: 'vpb', name: 'Ngân hàng TMCP Việt Nam Thịnh Vượng', shortName: 'VPBank', code: 'VPB', logo: '🟢' },
+  { id: 'acb', name: 'Ngân hàng TMCP Á Châu', shortName: 'ACB', code: 'ACB', logo: '🔵' },
+  { id: 'tpb', name: 'Ngân hàng TMCP Tiên Phong', shortName: 'TPBank', code: 'TPB', logo: '🟣' },
+  { id: 'ctg', name: 'Ngân hàng TMCP Công Thương Việt Nam', shortName: 'VietinBank', code: 'CTG', logo: '🔴' },
+  { id: 'hdb', name: 'Ngân hàng TMCP Phát triển TP.HCM', shortName: 'HDBank', code: 'HDB', logo: '🟡' },
+  { id: 'stb', name: 'Ngân hàng TMCP Sài Gòn Thương Tín', shortName: 'Sacombank', code: 'STB', logo: '🔵' },
+  { id: 'shb', name: 'Ngân hàng TMCP Sài Gòn - Hà Nội', shortName: 'SHB', code: 'SHB', logo: '🟠' },
+  { id: 'momo', name: 'Ví Điện Tử MoMo', shortName: 'MoMo', code: 'MOMO', logo: '💖' },
+  { id: 'zalopay', name: 'Ví Điện Tử ZaloPay', shortName: 'ZaloPay', code: 'ZALOPAY', logo: '💙' },
+];
+
+export const SURVEYS_LIST: Survey[] = [
+  {
+    id: 1,
+    title: 'Khảo sát thói quen mua sắm trực tuyến 2026',
+    category: 'Thương mại điện tử',
+    iconName: 'ShoppingBag',
+    questions: [
+      {
+        id: 1,
+        text: 'Bạn thường mua sắm online trên nền tảng nào nhất?',
+        options: [
+          { id: '1a', text: 'Shopee' },
+          { id: '1b', text: 'TikTok Shop' },
+          { id: '1c', text: 'Lazada' },
+          { id: '1d', text: 'Tiki / Khác' },
+        ],
+      },
+      {
+        id: 2,
+        text: 'Tần suất bạn đặt hàng online trong một tháng là bao nhiêu?',
+        options: [
+          { id: '2a', text: 'Hơn 10 đơn / tháng' },
+          { id: '2b', text: '5 - 10 đơn / tháng' },
+          { id: '2c', text: '2 - 4 đơn / tháng' },
+          { id: '2d', text: 'Dưới 2 đơn / tháng' },
+        ],
+      },
+      {
+        id: 3,
+        text: 'Yếu tố nào thúc đẩy bạn quyết định bấm Mua Hàng nhanh nhất?',
+        options: [
+          { id: '3a', text: 'Mã miễn phí vận chuyển (Freeship)' },
+          { id: '3b', text: 'Đánh giá 5 sao kèm hình ảnh/video thực tế' },
+          { id: '3c', text: 'Giá bán rẻ hơn thị trường' },
+          { id: '3d', text: 'Xem livestream tư vấn trực tiếp' },
+        ],
+      },
+      {
+        id: 4,
+        text: 'Phương thức thanh toán bạn ưa chuộng nhất khi mua hàng là gì?',
+        options: [
+          { id: '4a', text: 'Chuyển khoản VietQR / App Ngân Hàng' },
+          { id: '4b', text: 'Thanh toán tiền mặt khi nhận hàng (COD)' },
+          { id: '4c', text: 'Ví điện tử MoMo / ZaloPay' },
+          { id: '4d', text: 'Thẻ tín dụng / Ghi nợ quốc tế' },
+        ],
+      },
+      {
+        id: 5,
+        text: 'Theo bạn, sàn thương mại điện tử cần cải thiện điều gì nhất để trải nghiệm của bạn tốt hơn?',
+        type: 'text',
+        placeholder: 'Nhập nhận xét hoặc đề xuất của bạn...',
+        suggestions: [
+          'Phí ship rẻ hơn & nhiều mã freeship',
+          'Giao hàng nhanh và chuẩn hẹn',
+          'Chính sách đổi trả dễ dàng',
+          'Kiểm soát hàng giả chặt chẽ hơn',
+        ],
+        options: [
+          { id: '5a', text: 'Phí ship rẻ hơn & nhiều mã freeship' },
+          { id: '5b', text: 'Giao hàng nhanh và chuẩn hẹn' },
+          { id: '5c', text: 'Chính sách đổi trả dễ dàng' },
+          { id: '5d', text: 'Kiểm soát hàng giả chặt chẽ hơn' },
+        ],
+      },
+    ],
+  },
+  {
+    id: 2,
+    title: 'Khảo sát thói quen ẩm thực & đặt đồ ăn giao tận nơi',
+    category: 'Ẩm thực & Đời sống',
+    iconName: 'Utensils',
+    questions: [
+      {
+        id: 1,
+        text: 'Bạn thường tự nấu ăn ở nhà hay đặt món giao tận nơi?',
+        options: [
+          { id: '1a', text: 'Tự nấu ăn tại nhà hầu hết các bữa' },
+          { id: '1b', text: 'Đặt đồ ăn qua app giao hàng (GrabFood, ShopeeFood)' },
+          { id: '1c', text: 'Ăn trực tiếp tại quán / nhà hàng' },
+          { id: '1d', text: 'Kết hợp linh hoạt tùy ngày' },
+        ],
+      },
+      {
+        id: 2,
+        text: 'Bạn thường dùng ứng dụng nào nhất khi gọi món giao hàng?',
+        options: [
+          { id: '2a', text: 'GrabFood' },
+          { id: '2b', text: 'ShopeeFood' },
+          { id: '2c', text: 'BeFood' },
+          { id: '2d', text: 'Gọi hotline trực tiếp quán' },
+        ],
+      },
+      {
+        id: 3,
+        text: 'Mức giá trung bình cho một bữa ăn trưa/tối bạn thấy hợp lý là bao nhiêu?',
+        options: [
+          { id: '3a', text: '30.000đ - 45.000đ' },
+          { id: '3b', text: '50.000đ - 70.000đ' },
+          { id: '3c', text: '75.000đ - 120.000đ' },
+          { id: '3d', text: 'Trên 120.000đ' },
+        ],
+      },
+      {
+        id: 4,
+        text: 'Bạn ưu tiên tiêu chí nào nhất khi chọn món ăn?',
+        options: [
+          { id: '4a', text: 'Vệ sinh an toàn thực phẩm & tươi ngon' },
+          { id: '4b', text: 'Hương vị đậm đà, chuẩn vị' },
+          { id: '4c', text: 'Thời gian giao nhanh, đồ ăn còn nóng' },
+          { id: '4d', text: 'Giá cả phải chăng, có giảm giá' },
+        ],
+      },
+      {
+        id: 5,
+        text: 'Hãy chia sẻ món ăn yêu thích nhất hoặc quán ăn bạn thường xuyên ghé qua:',
+        type: 'text',
+        placeholder: 'Nhập tên món ăn hoặc quán ăn quen thuộc của bạn...',
+        suggestions: [
+          'Phở bò / Bún bò Huế truyền thống',
+          'Cơm tấm sườn bì chả',
+          'Trà sữa & đồ ăn vặt vỉa hè',
+          'Lẩu & nướng BBQ cùng bạn bè',
+        ],
+        options: [
+          { id: '5a', text: 'Phở bò / Bún bò Huế' },
+          { id: '5b', text: 'Cơm tấm sườn bì chả' },
+          { id: '5c', text: 'Trà sữa & đồ ăn vặt' },
+          { id: '5d', text: 'Lẩu & đồ nướng BBQ' },
+        ],
+      },
+    ],
+  },
+  {
+    id: 3,
+    title: 'Khảo sát nhu cầu sử dụng ứng dụng Ngân hàng số & Ví điện tử',
+    category: 'Tài chính số',
+    iconName: 'CreditCard',
+    questions: [
+      {
+        id: 1,
+        text: 'Bạn đang sử dụng ứng dụng ngân hàng số của đơn vị nào thường xuyên nhất?',
+        options: [
+          { id: '1a', text: 'Vietcombank / VCB Digibank' },
+          { id: '1b', text: 'MB Bank' },
+          { id: '1c', text: 'Techcombank' },
+          { id: '1d', text: 'BIDV / VPBank / Khác' },
+        ],
+      },
+      {
+        id: 2,
+        text: 'Tính năng nào trên app ngân hàng bạn sử dụng nhiều nhất mỗi ngày?',
+        options: [
+          { id: '2a', text: 'Chuyển khoản nhanh quét mã QR (VietQR)' },
+          { id: '2b', text: 'Thanh toán hóa đơn (Điện, Nước, Internet, Nạp ĐT)' },
+          { id: '2c', text: 'Gửi tiết kiệm online sinh lời' },
+          { id: '2d', text: 'Kiểm tra biến động số dư' },
+        ],
+      },
+      {
+        id: 3,
+        text: 'Bạn cảm thấy mức độ an toàn và bảo mật sinh trắc học hiện nay ra sao?',
+        options: [
+          { id: '3a', text: 'Rất an tâm và tiện lợi' },
+          { id: '3b', text: 'Tương đối an toàn nhưng đôi khi quét khuôn mặt khó' },
+          { id: '3c', text: 'Vẫn còn lo ngại rủi ro công nghệ' },
+          { id: '3d', text: 'Chưa sử dụng tính năng này' },
+        ],
+      },
+      {
+        id: 4,
+        text: 'Bạn có sử dụng ví điện tử (MoMo, ZaloPay, Viettel Money) song song không?',
+        options: [
+          { id: '4a', text: 'Có, dùng hàng ngày để săn voucher' },
+          { id: '4b', text: 'Có, nhưng chỉ dùng khi có ưu đãi lớn' },
+          { id: '4c', text: 'Hiếm khi dùng, chỉ dùng app ngân hàng' },
+          { id: '4d', text: 'Chưa từng liên kết ví điện tử' },
+        ],
+      },
+      {
+        id: 5,
+        text: 'Theo bạn, ứng dụng ngân hàng số cần bổ sung tính năng gì nhất?',
+        type: 'text',
+        placeholder: 'Nhập tính năng bạn muốn ngân hàng phát triển thêm...',
+        suggestions: [
+          'Chuyển tiền nhanh không cần số tài khoản',
+          'Quản lý chi tiêu tự động thông minh',
+          'Tích hợp đầu tư và tiết kiệm linh hoạt',
+          'Bảo mật sinh trắc học mượt mà hơn',
+        ],
+        options: [
+          { id: '5a', text: 'Quản lý chi tiêu thông minh' },
+          { id: '5b', text: 'Đầu tư và tiết kiệm linh hoạt' },
+          { id: '5c', text: 'Chuyển tiền 1 chạm VietQR' },
+          { id: '5d', text: 'Hỗ trợ khách hàng 24/7 trực tiếp' },
+        ],
+      },
+    ],
+  },
+  ...Array.from({ length: 27 }, (_, idx) => {
+    const sId = idx + 4;
+    const titles = [
+      'Khảo sát xu hướng sử dụng mạng xã hội & Video ngắn TikTok 2026',
+      'Khảo sát thói quen rèn luyện thể thao & chăm sóc sức khỏe',
+      'Khảo sát nhu cầu du lịch nghỉ dưỡng & đặt phòng khách sạn',
+      'Khảo sát phương tiện di chuyển cá nhân & dịch vụ gọi xe công nghệ',
+      'Khảo sát thói quen uống cà phê & không gian làm việc',
+      'Khảo sát nhu cầu sử dụng công nghệ Trí tuệ nhân tạo (AI)',
+      'Khảo sát hành vi tiêu dùng thời trang & mỹ phẩm',
+      'Khảo sát thị hiếu âm nhạc & ứng dụng nghe nhạc trực tuyến',
+      'Khảo sát nhu cầu học ngoại ngữ & phát triển bản thân',
+      'Khảo sát trải nghiệm làm việc từ xa (Remote / Hybrid)',
+      'Khảo sát mức độ quan tâm đến môi trường & sống xanh',
+      'Khảo sát xu hướng giải trí xem phim & Streaming',
+      'Khảo sát thói quen đọc sách & nghe sách nói podcast',
+      'Khảo sát nhu cầu mua sắm thiết bị gia dụng thông minh',
+      'Khảo sát dịch vụ viễn thông & gói cước 4G/5G',
+      'Khảo sát lựa chọn quán trà sữa & đồ uống giới trẻ',
+      'Khảo sát hành vi thanh toán không tiền mặt tại cửa hàng',
+      'Khảo sát nhu cầu sở hữu xe điện & năng lượng sạch',
+      'Khảo sát trải nghiệm mua thuốc & dịch vụ y tế trực tuyến',
+      'Khảo sát phong cách trang trí nội thất & nhà cửa',
+      'Khảo sát thị hiếu chơi game & thể thao điện tử',
+      'Khảo sát nhu cầu chăm sóc thú cưng & dịch vụ phụ kiện',
+      'Khảo sát quản lý tài chính cá nhân & tích lũy đầu tư',
+      'Khảo sát mức độ hài lòng về dịch vụ giao hàng nhanh',
+      'Khảo sát thói quen sử dụng tai nghe & thiết bị âm thanh',
+      'Khảo sát nhu cầu chụp ảnh & quay video sáng tạo nội dung',
+      'Khảo sát đánh giá trải nghiệm tổng quan người dùng',
+    ];
+    const catList = ['Công nghệ', 'Đời sống', 'Sức khỏe', 'Giải trí', 'Giáo dục', 'Tiêu dùng'];
+    return {
+      id: sId,
+      title: titles[idx] || `Khảo sát chuyên sâu đề tài #${sId}`,
+      category: catList[idx % catList.length],
+      iconName: 'Sparkles',
+      questions: [
+        {
+          id: 1,
+          text: `Bạn đánh giá như thế nào về mức độ cần thiết của chủ đề này trong cuộc sống hiện nay?`,
+          options: [
+            { id: '1a', text: 'Rất cần thiết và quan trọng hàng ngày' },
+            { id: '1b', text: 'Khá quan trọng trong một số thời điểm' },
+            { id: '1c', text: 'Bình thường, không ảnh hưởng nhiều' },
+            { id: '1d', text: 'Chưa thực sự quan tâm' },
+          ],
+        },
+        {
+          id: 2,
+          text: `Mức độ thường xuyên bạn tiếp cận hoặc sử dụng dịch vụ này là bao lâu?`,
+          options: [
+            { id: '2a', text: 'Hàng ngày liên tục' },
+            { id: '2b', text: 'Vài lần trong tuần' },
+            { id: '2c', text: '1 - 2 lần trong tháng' },
+            { id: '2d', text: 'Hiếm khi sử dụng' },
+          ],
+        },
+        {
+          id: 3,
+          text: `Tiêu chí quan trọng nhất khi bạn đưa ra lựa chọn hoặc quyết định là gì?`,
+          options: [
+            { id: '3a', text: 'Chất lượng đảm bảo và uy tín lâu năm' },
+            { id: '3b', text: 'Chi phí hợp lý, tiết kiệm ngân sách' },
+            { id: '3c', text: 'Sự tiện lợi, nhanh chóng và dễ dùng' },
+            { id: '3d', text: 'Dịch vụ chăm sóc và hỗ trợ tận tâm' },
+          ],
+        },
+        {
+          id: 4,
+          text: `Bạn có sẵn lòng giới thiệu cho bạn bè hoặc người thân cùng trải nghiệm không?`,
+          options: [
+            { id: '4a', text: 'Chắc chắn sẽ giới thiệu nhiệt tình' },
+            { id: '4b', text: 'Có thể giới thiệu nếu thấy phù hợp' },
+            { id: '4c', text: 'Cần trải nghiệm thêm một thời gian' },
+            { id: '4d', text: 'Không có ý định giới thiệu' },
+          ],
+        },
+        {
+          id: 5,
+          text: `Theo bạn, điều gì cần được đổi mới hoặc nâng cấp nhất trong tương lai?`,
+          type: 'text',
+          placeholder: 'Nhập đóng góp ý kiến hoặc chia sẻ chân thành của bạn...',
+          suggestions: [
+            'Cải thiện chất lượng và độ ổn định',
+            'Nhiều chính sách ưu đãi khách hàng thân thiết',
+            'Tối ưu giao diện nhanh và dễ dùng hơn',
+            'Hỗ trợ khách hàng 24/7 tức thì',
+          ],
+          options: [
+            { id: '5a', text: 'Cải thiện chất lượng và độ ổn định' },
+            { id: '5b', text: 'Nhiều chính sách ưu đãi hơn' },
+            { id: '5c', text: 'Tối ưu trải nghiệm nhanh mượt' },
+            { id: '5d', text: 'Hỗ trợ khách hàng tận tình' },
+          ],
+        },
+      ],
+    };
+  }),
+];
+
+/* =========================================================================
+   3. UTILS: FORMAT, ZERO-REWARD CHECK, CONFETTI
+   ========================================================================= */
+
+export function formatVND(amount: number): string {
+  return new Intl.NumberFormat('vi-VN').format(Math.round(amount)) + ' đ';
+}
+
+const ZERO_REWARD_GLOBAL_INDICES = new Set<number>([
+  1, 4, 7, 9, 12, 16, 18, 21, 25, 28,
+  31, 33, 37, 40, 43, 47, 49, 52, 56, 58,
+  62, 65, 68, 71, 74, 77, 81, 84, 87, 90,
+  93, 96, 99, 102, 106, 109, 112, 115, 118, 122,
+  125, 128, 131, 134, 137, 140, 143, 146, 148, 149,
+]);
+
+export function isZeroRewardQuestion(surveyId: number, questionId: number, customFlag?: boolean): boolean {
+  if (customFlag === true) return true;
+  const globalIndex = (surveyId - 1) * 5 + ((questionId - 1) % 5);
+  return ZERO_REWARD_GLOBAL_INDICES.has(globalIndex);
+}
+
+export function generateRandomReward(min = 200, max = 600): number {
+  const steps = [200, 250, 300, 350, 400, 450, 500, 550, 600];
+  const randomIndex = Math.floor(Math.random() * steps.length);
+  return steps[randomIndex];
+}
+
+export function calculateQuestionReward(surveyId: number, questionId: number, customFlag?: boolean): number {
+  if (isZeroRewardQuestion(surveyId, questionId, customFlag)) {
+    return 0;
+  }
+  return generateRandomReward(200, 600);
+}
+
+export function triggerRewardConfetti(intensity = 0.5): void {
+  try {
+    confetti({
+      particleCount: Math.round(40 * intensity),
+      spread: 60,
+      origin: { y: 0.75 },
+      colors: ['#4f46e5', '#10b981', '#f59e0b', '#3b82f6'],
+      ticks: 150,
+    });
+  } catch {}
+}
+
+export function triggerBigWinConfetti(): void {
+  try {
+    confetti({
+      particleCount: 100,
+      spread: 100,
+      origin: { y: 0.6 },
+      colors: ['#4f46e5', '#10b981', '#fbbf24', '#ec4899', '#6366f1'],
+    });
+  } catch {}
+}
+
+/* =========================================================================
+   4. CONTEXT & STATE ENGINE
+   ========================================================================= */
+
+interface SurveyContextType {
+  balance: number;
+  completedSurveys: CompletedSurveyRecord[];
+  activeSurvey: Survey | null;
+  activeQuestionIndex: number;
+  currentAnswers: { questionId: number; selectedOption: string; rewardEarned: number }[];
+  lastAwardedReward: number | null;
+  currentWithdrawal: WithdrawalTransaction | null;
+  initialCountdown: number;
+  withdrawalCountdown: number;
+  isWithdrawing: boolean;
+  withdrawalSuccess: boolean;
+  withdrawalHistory: WithdrawalTransaction[];
+  startSurvey: (survey: Survey) => void;
+  closeSurvey: () => void;
+  answerQuestion: (questionId: number, optionId: string) => number;
+  requestWithdrawal: (bankName: string, accountNumber: string, accountHolder: string, amount: number) => boolean;
+  resetWithdrawalStatus: () => void;
+}
+
+const SurveyContext = createContext<SurveyContextType | undefined>(undefined);
+
+export const SurveyProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [balance, setBalance] = useState<number>(() => {
+    const saved = localStorage.getItem('survey_balance');
+    return saved ? Number(saved) : 0;
+  });
+
+  const [completedSurveys, setCompletedSurveys] = useState<CompletedSurveyRecord[]>(() => {
+    const saved = localStorage.getItem('survey_completed');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [withdrawalHistory, setWithdrawalHistory] = useState<WithdrawalTransaction[]>(() => {
+    const saved = localStorage.getItem('survey_withdrawals');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [activeSurvey, setActiveSurvey] = useState<Survey | null>(null);
+  const [activeQuestionIndex, setActiveQuestionIndex] = useState<number>(0);
+  const [currentAnswers, setCurrentAnswers] = useState<
+    { questionId: number; selectedOption: string; rewardEarned: number }[]
+  >([]);
+  const [lastAwardedReward, setLastAwardedReward] = useState<number | null>(null);
+
+  const [isWithdrawing, setIsWithdrawing] = useState<boolean>(false);
+  const [initialCountdown, setInitialCountdown] = useState<number>(10);
+  const [withdrawalCountdown, setWithdrawalCountdown] = useState<number>(10);
+  const [currentWithdrawal, setCurrentWithdrawal] = useState<WithdrawalTransaction | null>(null);
+  const [withdrawalSuccess, setWithdrawalSuccess] = useState<boolean>(false);
+
+  useEffect(() => {
+    localStorage.setItem('survey_balance', balance.toString());
+  }, [balance]);
+
+  useEffect(() => {
+    localStorage.setItem('survey_completed', JSON.stringify(completedSurveys));
+  }, [completedSurveys]);
+
+  useEffect(() => {
+    localStorage.setItem('survey_withdrawals', JSON.stringify(withdrawalHistory));
+  }, [withdrawalHistory]);
+
+  useEffect(() => {
+    let timer: any;
+    if (isWithdrawing && withdrawalCountdown > 0) {
+      timer = setInterval(() => {
+        setWithdrawalCountdown((prev) => prev - 1);
+      }, 1000);
+    } else if (isWithdrawing && withdrawalCountdown === 0) {
+      setIsWithdrawing(false);
+      setWithdrawalSuccess(true);
+      triggerBigWinConfetti();
+
+      if (currentWithdrawal) {
+        const completedTx: WithdrawalTransaction = {
+          ...currentWithdrawal,
+          status: 'success',
+        };
+        setWithdrawalHistory((prev) => [completedTx, ...prev]);
+      }
+    }
+    return () => clearInterval(timer);
+  }, [isWithdrawing, withdrawalCountdown, currentWithdrawal]);
+
+  const startSurvey = (survey: Survey) => {
+    setActiveSurvey(survey);
+    setActiveQuestionIndex(0);
+    setCurrentAnswers([]);
+    setLastAwardedReward(null);
+  };
+
+  const closeSurvey = () => {
+    setActiveSurvey(null);
+    setActiveQuestionIndex(0);
+    setCurrentAnswers([]);
+    setLastAwardedReward(null);
+  };
+
+  const answerQuestion = (questionId: number, optionId: string): number => {
+    if (!activeSurvey) return 0;
+
+    const currentQ = activeSurvey.questions[activeQuestionIndex];
+    const reward = calculateQuestionReward(activeSurvey.id, questionId, currentQ?.noReward);
+    setLastAwardedReward(reward);
+
+    if (reward > 0) {
+      triggerRewardConfetti(0.5);
+      setBalance((prev) => prev + reward);
+    }
+
+    const newAnswer = { questionId, selectedOption: optionId, rewardEarned: reward };
+    const updatedAnswers = [...currentAnswers, newAnswer];
+    setCurrentAnswers(updatedAnswers);
+
+    if (activeQuestionIndex < activeSurvey.questions.length - 1) {
+      setActiveQuestionIndex((prev) => prev + 1);
+    } else {
+      const totalEarnedInThisSurvey = updatedAnswers.reduce((sum, item) => sum + item.rewardEarned, 0);
+      const newRecord: CompletedSurveyRecord = {
+        surveyId: activeSurvey.id,
+        completedAt: new Date().toISOString(),
+        totalEarned: totalEarnedInThisSurvey,
+      };
+
+      setCompletedSurveys((prev) => {
+        const filtered = prev.filter((r) => r.surveyId !== activeSurvey.id);
+        return [...filtered, newRecord];
+      });
+
+      triggerBigWinConfetti();
+    }
+
+    return reward;
+  };
+
+  const requestWithdrawal = (
+    bankName: string,
+    accountNumber: string,
+    accountHolder: string,
+    amount: number
+  ): boolean => {
+    if (amount <= 0 || amount > balance) return false;
+
+    setBalance((prev) => Math.max(0, prev - amount));
+
+    const refNumber = 'RT1029384756';
+    const newTransaction: WithdrawalTransaction = {
+      id: `TXN-${Date.now()}`,
+      amount,
+      bankName,
+      accountNumber,
+      accountHolder: accountHolder.toUpperCase(),
+      timestamp: new Date().toISOString(),
+      status: 'processing',
+      transactionRef: refNumber,
+    };
+
+    const randomDuration = Math.floor(Math.random() * 10) + 10;
+
+    setCurrentWithdrawal(newTransaction);
+    setInitialCountdown(randomDuration);
+    setWithdrawalCountdown(randomDuration);
+    setIsWithdrawing(true);
+    setWithdrawalSuccess(false);
+
+    return true;
+  };
+
+  const resetWithdrawalStatus = () => {
+    setIsWithdrawing(false);
+    setInitialCountdown(10);
+    setWithdrawalCountdown(10);
+    setWithdrawalSuccess(false);
+    setCurrentWithdrawal(null);
+  };
+
+  return (
+    <SurveyContext.Provider
+      value={{
+        balance,
+        completedSurveys,
+        activeSurvey,
+        activeQuestionIndex,
+        currentAnswers,
+        lastAwardedReward,
+        currentWithdrawal,
+        initialCountdown,
+        withdrawalCountdown,
+        isWithdrawing,
+        withdrawalSuccess,
+        withdrawalHistory,
+        startSurvey,
+        closeSurvey,
+        answerQuestion,
+        requestWithdrawal,
+        resetWithdrawalStatus,
+      }}
+    >
+      {children}
+    </SurveyContext.Provider>
+  );
+};
+
+export const useSurvey = () => {
+  const context = useContext(SurveyContext);
+  if (!context) throw new Error('useSurvey must be used within SurveyProvider');
+  return context;
+};
+
+/* =========================================================================
+   5. UI COMPONENTS: ICON HELPER, CAPTCHA, MODALS & BANNER
+   ========================================================================= */
+
+export const SurveyIcon: React.FC<{ name: string; className?: string }> = ({ name, className = 'w-5 h-5' }) => {
+  switch (name) {
+    case 'ShoppingBag': return <ShoppingBag className={className} />;
+    case 'Utensils': return <Utensils className={className} />;
+    case 'CreditCard': return <CreditCard className={className} />;
+    case 'Smartphone': return <Smartphone className={className} />;
+    case 'HeartPulse': return <HeartPulse className={className} />;
+    case 'Plane': return <Plane className={className} />;
+    case 'Car': return <Car className={className} />;
+    case 'Film': return <Film className={className} />;
+    default: return <Sparkles className={className} />;
+  }
+};
+
+const PUZZLE_ICONS = [
+  { id: 'car', label: 'Ô tô', symbol: '🚗' },
+  { id: 'shield', label: 'Bảo vệ', symbol: '🛡️' },
+  { id: 'heart', label: 'Trái tim', symbol: '❤️' },
+  { id: 'star', label: 'Ngôi sao', symbol: '⭐' },
+];
+
+export const CaptchaModal: React.FC<{ isOpen: boolean; onSuccess: () => void; onCancel?: () => void }> = ({
+  isOpen,
+  onSuccess,
+  onCancel,
+}) => {
+  const [isChecked, setIsChecked] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [targetPuzzle, setTargetPuzzle] = useState(PUZZLE_ICONS[0]);
+  const [shuffledIcons, setShuffledIcons] = useState(PUZZLE_ICONS);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setIsChecked(false);
+      setIsVerifying(false);
+      setIsSuccess(false);
+      setErrorMessage(null);
+      const randomTarget = PUZZLE_ICONS[Math.floor(Math.random() * PUZZLE_ICONS.length)];
+      setTargetPuzzle(randomTarget);
+      setShuffledIcons([...PUZZLE_ICONS].sort(() => Math.random() - 0.5));
+    }
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  const handleCheckboxClick = () => {
+    if (isVerifying || isSuccess) return;
+    setIsVerifying(true);
+    setErrorMessage(null);
+    setTimeout(() => {
+      setIsVerifying(false);
+      setIsChecked(true);
+      setIsSuccess(true);
+      setTimeout(() => {
+        onSuccess();
+      }, 700);
+    }, 900);
+  };
+
+  const handleSelectIcon = (iconId: string) => {
+    if (isSuccess || isVerifying) return;
+    if (iconId === targetPuzzle.id) {
+      setIsVerifying(true);
+      setErrorMessage(null);
+      setTimeout(() => {
+        setIsVerifying(false);
+        setIsSuccess(true);
+        setTimeout(() => {
+          onSuccess();
+        }, 700);
+      }, 500);
+    } else {
+      setErrorMessage('Lựa chọn chưa chính xác, vui lòng thử lại.');
+      setShuffledIcons([...PUZZLE_ICONS].sort(() => Math.random() - 0.5));
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-60 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+      <div className="relative w-full max-w-md bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150">
+        <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xs">
+              <ShieldCheck className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="font-bold text-slate-900 text-sm sm:text-base leading-tight">
+                Xác thực bảo mật (CAPTCHA)
+              </h3>
+              <p className="text-xs text-slate-500">Kiểm tra bạn có phải người thật</p>
+            </div>
+          </div>
+          {onCancel && (
+            <button
+              onClick={onCancel}
+              className="w-7 h-7 rounded-lg hover:bg-slate-200/60 text-slate-400 hover:text-slate-600 flex items-center justify-center transition cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+
+        <div className="p-5 sm:p-6 space-y-5">
+          <div className="text-center space-y-1">
+            <p className="text-xs sm:text-sm text-slate-600">
+              Hệ thống phòng chống tự động yêu cầu xác thực. Vui lòng hoàn thành bên dưới để tiếp tục nhận thưởng:
+            </p>
+          </div>
+
+          <div
+            onClick={handleCheckboxClick}
+            className={`p-4 rounded-xl border-2 transition-all flex items-center justify-between cursor-pointer ${
+              isSuccess
+                ? 'bg-emerald-50/80 border-emerald-500 text-emerald-900'
+                : 'bg-slate-50 hover:bg-slate-100/80 border-slate-200 hover:border-indigo-400'
+            }`}
+          >
+            <div className="flex items-center gap-3.5">
+              <div
+                className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all ${
+                  isSuccess
+                    ? 'bg-emerald-600 border-emerald-600 text-white'
+                    : isVerifying
+                    ? 'bg-slate-100 border-indigo-500'
+                    : 'bg-white border-slate-400 hover:border-indigo-500'
+                }`}
+              >
+                {isVerifying ? (
+                  <Loader2 className="w-4 h-4 text-indigo-600 animate-spin" />
+                ) : isSuccess ? (
+                  <CheckCircle2 className="w-4 h-4 text-white" />
+                ) : null}
+              </div>
+
+              <span className="text-xs sm:text-sm font-bold text-slate-800 select-none">
+                {isSuccess
+                  ? 'Xác thực thành công ✓'
+                  : isVerifying
+                  ? 'Đang kiểm tra bảo mật...'
+                  : 'Tôi không phải là người máy'}
+              </span>
+            </div>
+
+            <div className="flex flex-col items-end opacity-70">
+              <ShieldCheck className="w-5 h-5 text-indigo-600" />
+              <span className="text-[9px] text-slate-400 font-semibold tracking-tighter">SURVEY-SECURE</span>
+            </div>
+          </div>
+
+          {!isSuccess && (
+            <div className="bg-indigo-50/50 rounded-xl p-3.5 border border-indigo-100/80 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-700">
+                  Hoặc bấm chọn biểu tượng:{' '}
+                  <strong className="text-indigo-600 font-bold">
+                    {targetPuzzle.label} {targetPuzzle.symbol}
+                  </strong>
+                </span>
+                <span className="text-[10px] text-slate-400 font-medium">1 chạm</span>
+              </div>
+
+              <div className="grid grid-cols-4 gap-2">
+                {shuffledIcons.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => handleSelectIcon(item.id)}
+                    className="p-2.5 bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-400 rounded-xl text-center text-xl transition active:scale-95 cursor-pointer flex flex-col items-center justify-center gap-1 shadow-2xs"
+                  >
+                    <span>{item.symbol}</span>
+                    <span className="text-[10px] text-slate-500 font-medium">{item.label}</span>
+                  </button>
+                ))}
+              </div>
+
+              {errorMessage && <p className="text-xs text-red-500 font-medium text-center pt-1">{errorMessage}</p>}
+            </div>
+          )}
+
+          {isSuccess && (
+            <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-center text-xs font-bold text-emerald-700 animate-in fade-in flex items-center justify-center gap-2">
+              <Sparkles className="w-4 h-4 text-emerald-600" />
+              <span>Xác thực hoàn tất! Đang tiếp tục câu hỏi...</span>
+            </div>
+          )}
+
+          <div className="text-center text-[11px] text-slate-400 flex items-center justify-center gap-1">
+            <Lock className="w-3 h-3 text-slate-400" />
+            <span>Bảo mật dữ liệu khảo sát và chống gian lận tự động</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export const Header: React.FC<{ onOpenWithdraw: () => void; onOpenHistory: () => void }> = ({
+  onOpenWithdraw,
+  onOpenHistory,
+}) => {
+  const { balance } = useSurvey();
+
+  return (
+    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-6 lg:px-8 py-3.5">
+      <div className="max-w-7xl mx-auto flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-black text-lg shadow-sm">
+            S
+          </div>
+          <div>
+            <h1 className="font-extrabold text-slate-900 text-base sm:text-lg leading-tight flex items-center gap-1.5">
+              SurveyPro.vn
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 font-bold border border-emerald-200/60">
+                Chính thức
+              </span>
+            </h1>
+            <p className="text-xs text-slate-500 hidden sm:block">Khảo sát ý kiến người tiêu dùng tích lũy tiền mặt</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5">
+            <div className="w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
+              <Wallet className="w-4 h-4" />
+            </div>
+            <div>
+              <span className="text-[10px] text-slate-400 font-semibold block leading-none">Số dư ví</span>
+              <span className="text-xs sm:text-sm font-bold text-slate-900 leading-none">{formatVND(balance)}</span>
+            </div>
+          </div>
+
+          <button
+            onClick={onOpenWithdraw}
+            className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs sm:text-sm shadow-sm transition active:scale-95 flex items-center gap-1.5 cursor-pointer"
+          >
+            <ArrowDownToLine className="w-4 h-4" />
+            <span className="hidden sm:inline">Rút tiền</span>
+          </button>
+        </div>
+      </div>
+    </header>
+  );
+};
+
+export const StatsBanner: React.FC<{ onOpenWithdraw: () => void; onOpenHistory: () => void }> = ({
+  onOpenWithdraw,
+  onOpenHistory,
+}) => {
+  const { balance, completedSurveys } = useSurvey();
+  const totalSurveys = SURVEYS_LIST.length;
+  const completedCount = completedSurveys.length;
+  const percentDone = Math.round((completedCount / totalSurveys) * 100);
+
+  return (
+    <div className="bg-white border border-slate-200/80 rounded-2xl p-5 sm:p-7 shadow-sm transition">
+      <div className="max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+          <div className="lg:col-span-7 space-y-4">
+            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight leading-snug">
+              Xin chào người dùng <span className="text-indigo-600">Vuthithuy81</span>
+            </h2>
+
+            <p className="text-slate-500 text-sm leading-relaxed max-w-xl">
+              Nền tảng khảo sát ý kiến người tiêu dùng uy tín hàng đầu. Mỗi câu trả lời của bạn đều đóng góp vào sự phát triển dịch vụ & sản phẩm thực tế.
+            </p>
+
+            <div className="space-y-2 pt-1 max-w-lg">
+              <div className="flex justify-between items-center text-xs font-semibold">
+                <span className="text-slate-600 flex items-center gap-1.5">
+                  <Award className="w-3.5 h-3.5 text-indigo-600" />
+                  Tiến độ khảo sát đã hoàn thành
+                </span>
+                <span className="text-indigo-600 font-bold">
+                  {completedCount}/{totalSurveys} bài ({percentDone}%)
+                </span>
+              </div>
+              <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200/60">
+                <div
+                  className="h-full bg-indigo-600 transition-all duration-500 rounded-full"
+                  style={{ width: `${percentDone}%` }}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="lg:col-span-5 flex flex-col items-stretch lg:items-end justify-center">
+            <div className="w-full bg-slate-50/80 border border-slate-200/90 rounded-2xl p-5 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+                    <Wallet className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
+                      Số Dư Khả Dụng
+                    </span>
+                    <span className="text-2xl sm:text-3xl font-black text-slate-900 leading-none">
+                      {formatVND(balance)}
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={onOpenHistory}
+                  className="p-2 rounded-xl text-slate-500 hover:text-indigo-600 hover:bg-indigo-50/60 transition cursor-pointer flex items-center gap-1 text-xs font-medium border border-transparent hover:border-indigo-100"
+                  title="Xem lịch sử rút tiền"
+                >
+                  <History className="w-4 h-4" />
+                  <span className="hidden sm:inline">Lịch sử</span>
+                </button>
+              </div>
+
+              <div className="pt-1 flex gap-2.5">
+                <button
+                  onClick={onOpenWithdraw}
+                  className="flex-1 py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 transition text-white font-bold text-xs sm:text-sm shadow-sm flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <ArrowDownToLine className="w-4 h-4" />
+                  <span>Rút tiền về tài khoản</span>
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between text-[11px] text-slate-400 font-medium px-1">
+                <span className="flex items-center gap-1">
+                  <ShieldCheck className="w-3.5 h-3.5 text-indigo-500" />
+                  Hỗ trợ mọi ngân hàng VN
+                </span>
+                <span>Rút tối thiểu 0đ</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export const SurveyGrid: React.FC = () => {
+  const { completedSurveys, startSurvey } = useSurvey();
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+      {SURVEYS_LIST.map((survey) => {
+        const completedRecord = completedSurveys.find((r) => r.surveyId === survey.id);
+        const isDone = Boolean(completedRecord);
+
+        return (
+          <div
+            key={survey.id}
+            className={`rounded-2xl border p-5 transition-all duration-200 flex flex-col justify-between relative group ${
+              isDone
+                ? 'bg-slate-50/70 border-slate-200 opacity-90'
+                : 'bg-white hover:bg-slate-50/50 border-slate-200 hover:border-indigo-200 hover:shadow-md'
+            }`}
+          >
+            <div>
+              <div className="flex items-center justify-between mb-3.5">
+                <div className="flex items-center gap-2">
+                  <div
+                    className={`w-9 h-9 rounded-xl flex items-center justify-center ${
+                      isDone
+                        ? 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+                        : 'bg-indigo-50 text-indigo-600 border border-indigo-100 group-hover:scale-105 transition'
+                    }`}
+                  >
+                    <SurveyIcon name={survey.iconName} className="w-4 h-4" />
+                  </div>
+                  <span className="text-[11px] font-bold text-slate-400">Bài #{survey.id}</span>
+                </div>
+
+                <span
+                  className={`text-[11px] font-bold px-2.5 py-1 rounded-full border ${
+                    isDone
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                      : 'bg-indigo-50 text-indigo-700 border-indigo-100'
+                  }`}
+                >
+                  {isDone ? 'Đã hoàn thành' : '5 câu hỏi'}
+                </span>
+              </div>
+
+              <h3 className="font-bold text-slate-900 text-sm sm:text-base leading-snug line-clamp-2 mb-2 group-hover:text-indigo-600 transition">
+                {survey.title}
+              </h3>
+
+              <p className="text-xs text-slate-500 line-clamp-1 mb-4">{survey.category}</p>
+            </div>
+
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+              <div>
+                <span className="text-[10px] text-slate-400 font-semibold block">Mức thưởng:</span>
+                <span className="text-xs font-bold text-slate-800 flex items-center gap-1">
+                  <Coins className="w-3.5 h-3.5 text-amber-500" />
+                  200đ - 600đ/câu
+                </span>
+              </div>
+
+              <button
+                onClick={() => startSurvey(survey)}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95 ${
+                  isDone
+                    ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
+                    : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                }`}
+              >
+                <span>{isDone ? 'Làm lại' : 'Bắt đầu'}</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+export const SurveyRunnerModal: React.FC<{ onOpenWithdraw: () => void }> = ({ onOpenWithdraw }) => {
+  const { activeSurvey, activeQuestionIndex, currentAnswers, closeSurvey, answerQuestion, startSurvey } = useSurvey();
+
+  const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
+  const [textInput, setTextInput] = useState<string>('');
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [justAwardedAmount, setJustAwardedAmount] = useState<number | null>(null);
+
+  const [captchaTriggerIndex, setCaptchaTriggerIndex] = useState<number>(0);
+  const [hasSolvedCaptcha, setHasSolvedCaptcha] = useState<boolean>(false);
+  const [isCaptchaOpen, setIsCaptchaOpen] = useState<boolean>(false);
+  const [pendingAnswer, setPendingAnswer] = useState<{ questionId: number; answerValue: string } | null>(null);
+
+  useEffect(() => {
+    if (activeSurvey) {
+      const qCount = activeSurvey.questions.length || 5;
+      const randomIdx = Math.floor(Math.random() * qCount);
+      setCaptchaTriggerIndex(randomIdx);
+      setHasSolvedCaptcha(false);
+    }
+  }, [activeSurvey?.id]);
+
+  useEffect(() => {
+    setTextInput('');
+    setSelectedOptionId(null);
+  }, [activeQuestionIndex, activeSurvey]);
+
+  if (!activeSurvey) return null;
+
+  const currentQuestion = activeSurvey.questions[activeQuestionIndex];
+  const isFinished = currentAnswers.length >= activeSurvey.questions.length;
+  const totalEarnedInSurvey = currentAnswers.reduce((sum, a) => sum + a.rewardEarned, 0);
+
+  const executeAnswerSubmission = (questionId: number, answerValue: string) => {
+    setIsSubmitting(true);
+    const reward = answerQuestion(questionId, answerValue);
+    setJustAwardedAmount(reward);
+
+    setTimeout(() => {
+      setSelectedOptionId(null);
+      setTextInput('');
+      setIsSubmitting(false);
+      setJustAwardedAmount(null);
+    }, 650);
+  };
+
+  const shouldTriggerCaptcha = (): boolean => {
+    return !hasSolvedCaptcha && activeQuestionIndex === captchaTriggerIndex;
+  };
+
+  const handleSelectOption = (optionId: string) => {
+    if (isSubmitting || isFinished) return;
+    setSelectedOptionId(optionId);
+
+    if (shouldTriggerCaptcha()) {
+      setPendingAnswer({ questionId: currentQuestion.id, answerValue: optionId });
+      setIsCaptchaOpen(true);
+      return;
+    }
+
+    executeAnswerSubmission(currentQuestion.id, optionId);
+  };
+
+  const handleSubmitText = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (isSubmitting || isFinished) return;
+    const valueToSubmit = textInput.trim() || (currentQuestion.suggestions?.[0] || 'Hoàn toàn đồng ý');
+
+    if (shouldTriggerCaptcha()) {
+      setPendingAnswer({ questionId: currentQuestion.id, answerValue: valueToSubmit });
+      setIsCaptchaOpen(true);
+      return;
+    }
+
+    executeAnswerSubmission(currentQuestion.id, valueToSubmit);
+  };
+
+  const handleCaptchaSuccess = () => {
+    setHasSolvedCaptcha(true);
+    setIsCaptchaOpen(false);
+    if (pendingAnswer) {
+      executeAnswerSubmission(pendingAnswer.questionId, pendingAnswer.answerValue);
+      setPendingAnswer(null);
+    }
+  };
+
+  const handleNextSurvey = () => {
+    const nextSurvey = SURVEYS_LIST.find((s) => s.id === activeSurvey.id + 1) || SURVEYS_LIST[0];
+    startSurvey(nextSurvey);
+  };
+
+  return (
+    <>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-3 sm:p-6 overflow-y-auto">
+        <div className="relative w-full max-w-2xl bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden text-slate-800 my-auto animate-in fade-in zoom-in-95 duration-150">
+          {justAwardedAmount !== null && (
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-none animate-bounce">
+              {justAwardedAmount > 0 ? (
+                <div className="px-5 py-2.5 rounded-xl bg-indigo-600 text-white font-black text-xl shadow-xl flex items-center gap-2 border border-indigo-400">
+                  <Coins className="w-6 h-6 animate-spin text-amber-300" />
+                  <span>+{formatVND(justAwardedAmount)}</span>
+                </div>
+              ) : (
+                <div className="px-5 py-2 rounded-xl bg-slate-800 text-white font-bold text-sm shadow-xl flex items-center gap-2 border border-slate-700">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  <span>Đã ghi nhận ý kiến • +0đ</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between bg-white">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+                <SurveyIcon name={activeSurvey.iconName} className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] px-2 py-0.5 rounded font-bold uppercase bg-indigo-50 text-indigo-600 border border-indigo-100">
+                    Bài #{activeSurvey.id}/30
+                  </span>
+                  <span className="text-xs text-slate-400 hidden sm:inline">{activeSurvey.category}</span>
+                </div>
+                <h3 className="font-bold text-slate-900 text-sm sm:text-base leading-tight mt-0.5 line-clamp-1">
+                  {activeSurvey.title}
+                </h3>
+              </div>
+            </div>
+
+            <button
+              onClick={closeSurvey}
+              className="w-8 h-8 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 flex items-center justify-center transition cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {!isFinished && (
+            <div className="px-5 sm:px-6 pt-3.5 pb-2 bg-slate-50/50 border-b border-slate-100">
+              <div className="flex justify-between items-center text-xs font-semibold text-slate-500 mb-1.5">
+                <span className="flex items-center gap-1.5 text-indigo-600 font-bold">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  Câu hỏi {activeQuestionIndex + 1} / {activeSurvey.questions.length}
+                </span>
+                <span className="text-slate-500 flex items-center gap-1">
+                  <Coins className="w-3.5 h-3.5 text-amber-500" />
+                  Thưởng: <strong className="text-slate-800">200đ - 600đ/câu</strong>
+                </span>
+              </div>
+              <div className="w-full h-1.5 bg-slate-200/80 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-indigo-600 transition-all duration-300 rounded-full"
+                  style={{ width: `${((activeQuestionIndex) / activeSurvey.questions.length) * 100}%` }}
+                />
+              </div>
+            </div>
+          )}
+
+          <div className="p-5 sm:p-7">
+            {!isFinished ? (
+              <div className="space-y-5">
+                <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-4 sm:p-5">
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="text-[11px] font-bold uppercase tracking-wider text-indigo-600">
+                      Câu hỏi {activeQuestionIndex + 1}
+                    </div>
+                    {currentQuestion.type === 'text' && (
+                      <span className="text-[10px] bg-indigo-100/70 text-indigo-700 font-bold px-2 py-0.5 rounded-md flex items-center gap-1">
+                        <PenTool className="w-3 h-3" /> Câu hỏi điền ý kiến
+                      </span>
+                    )}
+                  </div>
+                  <h4 className="text-base sm:text-lg font-bold text-slate-900 leading-snug">
+                    {currentQuestion.text}
+                  </h4>
+                </div>
+
+                {currentQuestion.type === 'text' ? (
+                  <form onSubmit={handleSubmitText} className="space-y-3.5">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                        Nhập câu trả lời hoặc nhận xét của bạn:
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={textInput}
+                        onChange={(e) => setTextInput(e.target.value)}
+                        placeholder={currentQuestion.placeholder || 'Nhập ý kiến hoặc chia sẻ ngắn gọn của bạn tại đây...'}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition resize-none"
+                      />
+                    </div>
+
+                    {currentQuestion.suggestions && currentQuestion.suggestions.length > 0 && (
+                      <div className="space-y-1.5">
+                        <span className="text-[11px] font-medium text-slate-500">Gợi ý nhanh:</span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {currentQuestion.suggestions.map((sug, sIdx) => (
+                            <button
+                              key={sIdx}
+                              type="button"
+                              onClick={() => setTextInput(sug)}
+                              className="px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 border border-slate-200 text-slate-700 transition cursor-pointer"
+                            >
+                              {sug}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="pt-1">
+                      <button
+                        type="submit"
+                        disabled={isSubmitting}
+                        className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs sm:text-sm shadow-sm active:scale-95 transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                      >
+                        <Send className="w-4 h-4" />
+                        <span>Gửi câu trả lời & Nhận thưởng</span>
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <div className="space-y-2.5">
+                    {currentQuestion.options?.map((option, idx) => {
+                      const isSelected = selectedOptionId === option.id;
+                      const letterPrefix = String.fromCharCode(65 + idx);
+
+                      return (
+                        <button
+                          key={option.id}
+                          disabled={isSubmitting}
+                          onClick={() => handleSelectOption(option.id)}
+                          className={`w-full text-left p-3.5 sm:p-4 rounded-xl border transition-all duration-150 flex items-center justify-between group cursor-pointer ${
+                            isSelected
+                              ? 'bg-indigo-50 border-indigo-500 text-indigo-900 ring-2 ring-indigo-500/20 shadow-sm'
+                              : 'bg-white hover:bg-slate-50/80 border-slate-200 hover:border-indigo-300 text-slate-700 hover:text-slate-900'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <span
+                              className={`w-7 h-7 rounded-lg font-bold text-xs flex items-center justify-center transition shrink-0 ${
+                                isSelected
+                                  ? 'bg-indigo-600 text-white'
+                                  : 'bg-slate-100 text-slate-500 group-hover:text-slate-800 border border-slate-200/60'
+                              }`}
+                            >
+                              {letterPrefix}
+                            </span>
+                            <span className="text-xs sm:text-sm font-medium leading-relaxed">
+                              {option.text}
+                            </span>
+                          </div>
+
+                          <div className="shrink-0 ml-2">
+                            {isSelected ? (
+                              <div className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center">
+                                <Check className="w-3 h-3 stroke-[3]" />
+                              </div>
+                            ) : (
+                              <div className="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-indigo-600 border border-slate-200 font-semibold">
+                                +200đ - 600đ
+                              </div>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-center space-y-5 py-2">
+                <div className="w-16 h-16 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center mx-auto shadow-sm">
+                  <Award className="w-8 h-8 font-black" />
+                </div>
+
+                <div>
+                  <h4 className="text-xl sm:text-2xl font-bold text-slate-900">
+                    Hoàn Thành Khảo Sát #{activeSurvey.id}!
+                  </h4>
+                  <p className="text-xs sm:text-sm text-slate-500 mt-1">
+                    Bạn đã trả lời xuất sắc 5/5 câu hỏi và hoàn tất khảo sát.
+                  </p>
+                </div>
+
+                <div className="bg-emerald-50/70 border border-emerald-200 rounded-xl p-4 sm:p-5 max-w-md mx-auto shadow-sm">
+                  <span className="text-[11px] text-emerald-800 uppercase font-bold tracking-wider">
+                    Tổng tiền thưởng nhận được
+                  </span>
+                  <div className="text-3xl font-black text-emerald-600 mt-1">
+                    +{formatVND(totalEarnedInSurvey)}
+                  </div>
+                  <div className="text-xs text-emerald-700 mt-1 font-medium flex items-center justify-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5" /> Đã cộng trực tiếp vào số dư ví của bạn
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-2.5 justify-center pt-2">
+                  <button
+                    onClick={handleNextSurvey}
+                    className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs sm:text-sm shadow-sm active:scale-95 transition flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <span>Làm khảo sát tiếp theo</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      closeSurvey();
+                      onOpenWithdraw();
+                    }}
+                    className="px-5 py-2.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs sm:text-sm border border-slate-200 shadow-sm active:scale-95 transition flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <ArrowDownToLine className="w-4 h-4 text-emerald-600" />
+                    <span>Rút tiền về ngân hàng</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <CaptchaModal
+        isOpen={isCaptchaOpen}
+        onSuccess={handleCaptchaSuccess}
+        onCancel={() => {
+          setIsCaptchaOpen(false);
+          setPendingAnswer(null);
+          setSelectedOptionId(null);
+        }}
+      />
+    </>
+  );
+};
+
+export const WithdrawModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
+  const {
+    balance,
+    isWithdrawing,
+    initialCountdown,
+    withdrawalCountdown,
+    withdrawalSuccess,
+    currentWithdrawal,
+    requestWithdrawal,
+    resetWithdrawalStatus,
+  } = useSurvey();
+
+  const [selectedBank, setSelectedBank] = useState<string>(POPULAR_BANKS[0].shortName);
+  const [accountNumber, setAccountNumber] = useState<string>('');
+  const [accountHolder, setAccountHolder] = useState<string>('');
+  const [withdrawAmount, setWithdrawAmount] = useState<string>('');
+  const [formError, setFormError] = useState<string | null>(null);
+  const [copiedRef, setCopiedRef] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (balance > 0 && !withdrawAmount) {
+      setWithdrawAmount(balance.toString());
+    }
+  }, [balance]);
+
+  if (!isOpen) return null;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormError(null);
+    const numAmount = Number(withdrawAmount);
+
+    if (!accountNumber.trim()) {
+      setFormError('Vui lòng nhập số tài khoản ngân hàng.');
+      return;
+    }
+    if (!accountHolder.trim()) {
+      setFormError('Vui lòng nhập tên chủ tài khoản thụ hưởng.');
+      return;
+    }
+    if (isNaN(numAmount) || numAmount < 0) {
+      setFormError('Số tiền rút không hợp lệ.');
+      return;
+    }
+    if (numAmount > balance) {
+      setFormError(`Số dư ví hiện tại (${formatVND(balance)}) không đủ để rút.`);
+      return;
+    }
+
+    const ok = requestWithdrawal(selectedBank, accountNumber, accountHolder, numAmount);
+    if (!ok) setFormError('Không thể tạo lệnh rút tiền, vui lòng kiểm tra lại số dư.');
+  };
+
+  const handleCopyRef = () => {
+    if (currentWithdrawal?.transactionRef) {
+      navigator.clipboard.writeText(currentWithdrawal.transactionRef);
+      setCopiedRef(true);
+      setTimeout(() => setCopiedRef(false), 2000);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-3 sm:p-6 overflow-y-auto">
+      <div className="relative w-full max-w-xl bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden text-slate-800 my-auto animate-in fade-in zoom-in-95 duration-150">
+        <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between bg-white">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+              <Building2 className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="font-bold text-slate-900 text-sm sm:text-base leading-tight">Rút tiền về tài khoản ngân hàng</h3>
+              <p className="text-xs text-slate-500">Chuyển khoản liên ngân hàng 24/7 tức thì</p>
+            </div>
+          </div>
+          {!isWithdrawing && (
+            <button onClick={onClose} className="w-8 h-8 rounded-lg hover:bg-slate-100 text-slate-400 flex items-center justify-center cursor-pointer">
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+
+        <div className="p-5 sm:p-6">
+          {isWithdrawing ? (
+            <div className="text-center py-6 space-y-6">
+              <div className="relative w-28 h-28 mx-auto flex items-center justify-center">
+                <svg className="w-full h-full transform -rotate-90" viewBox="0 0 120 120">
+                  <circle cx="60" cy="60" r="52" stroke="currentColor" strokeWidth="8" className="text-slate-100" fill="transparent" />
+                  <circle
+                    cx="60"
+                    cy="60"
+                    r="52"
+                    stroke="currentColor"
+                    strokeWidth="8"
+                    className="text-indigo-600 transition-all duration-1000 ease-linear"
+                    fill="transparent"
+                    strokeDasharray={2 * Math.PI * 52}
+                    strokeDashoffset={2 * Math.PI * 52 * (1 - ((initialCountdown || 10) - withdrawalCountdown) / (initialCountdown || 10))}
+                    strokeLinecap="round"
+                  />
+                </svg>
+                <div className="absolute flex flex-col items-center justify-center">
+                  <span className="text-3xl font-black text-slate-900">{withdrawalCountdown}s</span>
+                  <span className="text-[10px] text-slate-400 font-semibold uppercase">Đang xử lý</span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <h4 className="text-base sm:text-lg font-bold text-slate-900">Đang thực hiện lệnh chuyển khoản tự động</h4>
+                <p className="text-xs sm:text-sm text-slate-500">Hệ thống liên ngân hàng NAPAS 24/7 đang xử lý giao dịch</p>
+              </div>
+
+              {currentWithdrawal && (
+                <div className="bg-slate-50 rounded-xl p-4 border border-slate-200/80 max-w-sm mx-auto text-left text-xs space-y-2">
+                  <div className="flex justify-between"><span className="text-slate-500">Số tiền:</span><span className="font-bold text-indigo-600 text-sm">{formatVND(currentWithdrawal.amount)}</span></div>
+                  <div className="flex justify-between"><span className="text-slate-500">Ngân hàng:</span><span className="font-semibold text-slate-800">{currentWithdrawal.bankName}</span></div>
+                  <div className="flex justify-between"><span className="text-slate-500">Số tài khoản:</span><span className="font-semibold text-slate-800">{currentWithdrawal.accountNumber}</span></div>
+                  <div className="flex justify-between"><span className="text-slate-500">Người nhận:</span><span className="font-semibold text-slate-800">{currentWithdrawal.accountHolder}</span></div>
+                </div>
+              )}
+            </div>
+          ) : withdrawalSuccess ? (
+            <div className="text-center py-4 space-y-5">
+              <div className="w-16 h-16 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center mx-auto shadow-sm">
+                <CheckCircle2 className="w-8 h-8 stroke-[2.5]" />
+              </div>
+              <div>
+                <h4 className="text-xl font-bold text-slate-900">Chuyển Tiền Thành Công!</h4>
+                <p className="text-xs sm:text-sm text-slate-500 mt-1">Tiền thưởng đã được chuyển đến tài khoản ngân hàng của bạn.</p>
+              </div>
+
+              {currentWithdrawal && (
+                <div className="bg-emerald-50/60 border border-emerald-200 rounded-xl p-4 max-w-sm mx-auto text-left text-xs space-y-2">
+                  <div className="flex justify-between items-center"><span className="text-slate-600">Mã giao dịch:</span><span className="font-mono font-bold text-indigo-600 flex items-center gap-1 cursor-pointer" onClick={handleCopyRef}>{currentWithdrawal.transactionRef} <Copy className="w-3 h-3" /></span></div>
+                  <div className="flex justify-between"><span className="text-slate-600">Số tiền:</span><span className="font-black text-emerald-600 text-sm">+{formatVND(currentWithdrawal.amount)}</span></div>
+                  <div className="flex justify-between"><span className="text-slate-600">Tài khoản nhận:</span><span className="font-semibold text-slate-800">{currentWithdrawal.accountNumber} ({currentWithdrawal.bankName})</span></div>
+                  <div className="flex justify-between"><span className="text-slate-600">Chủ tài khoản:</span><span className="font-semibold text-slate-800">{currentWithdrawal.accountHolder}</span></div>
+                </div>
+              )}
+
+              <button onClick={() => { resetWithdrawalStatus(); onClose(); }} className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs sm:text-sm cursor-pointer shadow-sm">
+                Hoàn tất & Tiếp tục làm khảo sát
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="bg-indigo-50/60 border border-indigo-100 rounded-xl p-3.5 flex items-center justify-between">
+                <div>
+                  <span className="text-[11px] text-indigo-700 font-semibold block">Số dư hiện tại</span>
+                  <span className="text-xl font-black text-indigo-950">{formatVND(balance)}</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-xs text-slate-600 bg-white px-3 py-1.5 rounded-lg border border-slate-200">
+                  <ShieldCheck className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Chuyển 24/7 (từ 1s - 60s)</span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">Ngân hàng / Ví nhận tiền</label>
+                <select value={selectedBank} onChange={(e) => setSelectedBank(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm font-medium">
+                  {POPULAR_BANKS.map((b) => (<option key={b.id} value={b.shortName}>{b.shortName} - {b.name}</option>))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">Số tài khoản / Số điện thoại ví</label>
+                <input type="text" value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} placeholder="Ví dụ: 19038472910" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm" />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">Tên chủ tài khoản (Không dấu)</label>
+                <input type="text" value={accountHolder} onChange={(e) => setAccountHolder(e.target.value.toUpperCase())} placeholder="Ví dụ: VU THI THUY" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm uppercase font-semibold" />
+              </div>
+
+              <div>
+                <div className="flex justify-between items-center mb-1.5">
+                  <label className="text-xs font-semibold text-slate-700">Số tiền muốn rút (VNĐ)</label>
+                  <button type="button" onClick={() => setWithdrawAmount(balance.toString())} className="text-[11px] font-bold text-indigo-600 hover:underline cursor-pointer">Rút tất cả ({formatVND(balance)})</button>
+                </div>
+                <input type="number" value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} placeholder="0" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm font-bold" />
+              </div>
+
+              {formError && <p className="text-xs text-red-500 font-medium">{formError}</p>}
+
+              <button type="submit" disabled={balance <= 0} className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs sm:text-sm shadow-sm transition active:scale-95 disabled:opacity-50 cursor-pointer">
+                Xác nhận rút tiền (Xử lý từ 1s - 60s)
+              </button>
+            </form>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export const TransactionHistoryModal: React.FC<{ isOpen: boolean; onClose: () => void; onOpenWithdraw: () => void }> = ({
+  isOpen,
+  onClose,
+  onOpenWithdraw,
+}) => {
+  const { withdrawalHistory } = useSurvey();
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-3 sm:p-6 overflow-y-auto">
+      <div className="relative w-full max-w-xl bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden text-slate-800 my-auto animate-in fade-in zoom-in-95 duration-150">
+        <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between bg-white">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+              <History className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="font-bold text-slate-900 text-sm sm:text-base leading-tight">Lịch sử rút tiền</h3>
+              <p className="text-xs text-slate-500">Các giao dịch chuyển khoản về tài khoản ngân hàng</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 rounded-lg hover:bg-slate-100 text-slate-400 flex items-center justify-center cursor-pointer">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="p-5 sm:p-6 max-h-96 overflow-y-auto space-y-3">
+          {withdrawalHistory.length === 0 ? (
+            <div className="text-center py-8 space-y-3">
+              <Clock className="w-10 h-10 text-slate-300 mx-auto" />
+              <p className="text-xs sm:text-sm text-slate-500">Chưa có giao dịch rút tiền nào được ghi nhận.</p>
+              <button onClick={onOpenWithdraw} className="px-4 py-2 rounded-xl bg-indigo-600 text-white text-xs font-bold cursor-pointer">
+                Rút tiền ngay
+              </button>
+            </div>
+          ) : (
+            withdrawalHistory.map((tx) => (
+              <div key={tx.id} className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-xs">
+                <div>
+                  <div className="font-bold text-slate-900">{tx.bankName} - {tx.accountNumber}</div>
+                  <div className="text-slate-400 text-[11px]">{new Date(tx.timestamp).toLocaleString('vi-VN')} • Mã: {tx.transactionRef}</div>
+                </div>
+                <div className="text-right">
+                  <div className="font-black text-emerald-600 text-sm">+{formatVND(tx.amount)}</div>
+                  <span className="inline-block text-[10px] px-2 py-0.5 rounded font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    Thành công ✓
+                  </span>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* =========================================================================
+   6. MAIN APPLICATION ENTRY COMPONENT (APP)
+   ========================================================================= */
+
+export function App() {
+  const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+
+  return (
+    <SurveyProvider>
+      <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-sans selection:bg-indigo-100 selection:text-indigo-900">
+        <Header onOpenWithdraw={() => setIsWithdrawModalOpen(true)} onOpenHistory={() => setIsHistoryModalOpen(true)} />
+
+        <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-8">
+          <StatsBanner onOpenWithdraw={() => setIsWithdrawModalOpen(true)} onOpenHistory={() => setIsHistoryModalOpen(true)} />
+
+          <section className="space-y-4">
+            <div>
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-800 tracking-tight flex items-center gap-2.5">
+                Danh Sách Khảo Sát
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-500 mt-1">
+                Chọn bất kỳ bài khảo sát nào để trả lời 5 câu hỏi và nhận thưởng tiền mặt ngay lập tức.
+              </p>
+            </div>
+
+            <SurveyGrid />
+          </section>
+        </main>
+
+        <footer className="border-t border-slate-200/80 bg-white py-8 px-4 sm:px-6 text-sm text-slate-500 mt-12">
+          <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6 pb-6">
+            <div className="space-y-2">
+              <div className="font-bold text-slate-900 flex items-center gap-2">
+                <div className="w-5 h-5 rounded-md bg-indigo-600 text-white flex items-center justify-center text-xs">✓</div>
+                SurveyPro.vn • Khảo Sát Kiếm Tiền
+              </div>
+              <p className="text-slate-500 leading-relaxed text-xs sm:text-sm">
+                Nền tảng khảo sát trực tuyến uy tín, thu thập phản hồi khách hàng và tích lũy phần thưởng sau mỗi câu trả lời.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <div className="font-bold text-slate-900 flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-indigo-600" />
+                Rút Tiền Ngân Hàng 24/7
+              </div>
+              <p className="text-slate-500 leading-relaxed text-xs sm:text-sm">
+                Hỗ trợ rút tiền về tất cả các ngân hàng Việt Nam (VCB, TCB, MB, BIDV, VPBank, ACB, TPBank...) & ví MoMo, ZaloPay.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <div className="font-bold text-slate-900 flex items-center gap-2">
+                <HelpCircle className="w-4 h-4 text-indigo-600" />
+                Hỗ Trợ & Bảo Mật
+              </div>
+              <p className="text-slate-500 leading-relaxed text-xs sm:text-sm">
+                Hệ thống cam kết bảo mật toàn diện thông tin cá nhân và số tài khoản ngân hàng của bạn.
+              </p>
+            </div>
+          </div>
+
+          <div className="pt-6 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-slate-400">
+            <span>© 2026 SurveyPro.vn.</span>
+            <div className="flex items-center gap-4 font-medium">
+              <button onClick={() => setIsWithdrawModalOpen(true)} className="hover:text-indigo-600 transition cursor-pointer">
+                Rút tiền nhanh
+              </button>
+              <span>•</span>
+              <button onClick={() => setIsHistoryModalOpen(true)} className="hover:text-indigo-600 transition cursor-pointer">
+                Lịch sử nhận thưởng
+              </button>
+            </div>
+          </div>
+        </footer>
+
+        <SurveyRunnerModal onOpenWithdraw={() => setIsWithdrawModalOpen(true)} />
+        <WithdrawModal isOpen={isWithdrawModalOpen} onClose={() => setIsWithdrawModalOpen(false)} />
+        <TransactionHistoryModal
+          isOpen={isHistoryModalOpen}
+          onClose={() => setIsHistoryModalOpen(false)}
+          onOpenWithdraw={() => {
+            setIsHistoryModalOpen(false);
+            setIsWithdrawModalOpen(true);
+          }}
+        />
+      </div>
+    </SurveyProvider>
+  );
+}
+
+export default App;

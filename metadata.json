@@ -1,0 +1,6 @@
+{
+  "name": "Khảo Sát Kiếm Tiền - Rút Tiền Về Ngân Hàng",
+  "description": "Nền tảng làm 30 bài khảo sát nhận thưởng từ 200đ đến 600đ mỗi câu hỏi và hệ thống rút tiền về tài khoản ngân hàng xử lý nhanh chóng.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
